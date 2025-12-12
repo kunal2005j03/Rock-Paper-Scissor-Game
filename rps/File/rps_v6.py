@@ -8,14 +8,19 @@ from PIL import Image, ImageTk
 import threading
 import pygame
 
-def resource_path(filename):
-    import sys, os
+# --- PATH CONFIGURATION ---
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
     try:
-        base_path = sys._MEIPASS  # for PyInstaller
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
     except Exception:
-        base_path = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(base_path, filename)
+        # 1. Get the path of the current script (inside 'File')
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # 2. Go UP one level to the main project folder (parent of 'File')
+        base_path = os.path.join(script_dir, '..')
 
+    return os.path.join(base_path, relative_path)
 
 # Hide terminal window on Windows
 if os.name == 'nt':
@@ -24,22 +29,34 @@ if os.name == 'nt':
 # Initialize sound system
 pygame.mixer.init()
 
-# Load sound effects
-win_sound = pygame.mixer.Sound(resource_path("win.wav"))
-lose_sound = pygame.mixer.Sound(resource_path("lose.wav"))
-draw_sound = pygame.mixer.Sound(resource_path("draw.wav"))
-background_music = resource_path("bg_rps.mp3")
+# --- LOAD SOUNDS ---
+# Looks in: rps/Resource/Audio/
+try:
+    win_sound = pygame.mixer.Sound(resource_path(os.path.join("Resource", "Audio", "win.wav")))
+    lose_sound = pygame.mixer.Sound(resource_path(os.path.join("Resource", "Audio", "lose.wav")))
+    draw_sound = pygame.mixer.Sound(resource_path(os.path.join("Resource", "Audio", "draw.wav")))
+    background_music = resource_path(os.path.join("Resource", "Audio", "bg_rps.mp3"))
+except FileNotFoundError as e:
+    print(f"Error loading sound: {e}")
+    # Create empty sound objects to prevent crash
+    win_sound = lose_sound = draw_sound = pygame.mixer.Sound(buffer=bytearray())
+    background_music = None
 
 # Set default volumes
-pygame.mixer.music.set_volume(0.5)  # 50%
-win_sound.set_volume(0.5)            # 50%
+if background_music:
+    pygame.mixer.music.set_volume(0.5) 
+win_sound.set_volume(0.5)           
 lose_sound.set_volume(0.5)
 draw_sound.set_volume(0.5)
 
 # Play background music in a separate thread
 def play_music():
-    pygame.mixer.music.load(background_music)
-    pygame.mixer.music.play(-1)
+    if background_music:
+        try:
+            pygame.mixer.music.load(background_music)
+            pygame.mixer.music.play(-1)
+        except Exception as e:
+            print(f"Music Error: {e}")
 
 music_thread = threading.Thread(target=play_music)
 music_thread.daemon = True
@@ -61,8 +78,13 @@ def gui_game():
         user_label.config(text=f"You: {reverse_moves[user]}")
         comp_label.config(text=f"Computer: {reverse_moves[computer]}")
 
-        user_image_label.config(image=player_images[user_choice])
-        comp_image_label.config(image=computer_images[reverse_moves[computer].lower()])
+        # Update Images
+        if user_choice in player_images:
+            user_image_label.config(image=player_images[user_choice])
+        
+        comp_move_name = reverse_moves[computer].lower()
+        if comp_move_name in computer_images:
+            comp_image_label.config(image=computer_images[comp_move_name])
 
         if user == computer:
             result_label.config(text="Draw 🤝", fg="blue")
@@ -92,7 +114,8 @@ def gui_game():
         comp_image_label.config(image="")
 
     def update_music_volume(val):
-        pygame.mixer.music.set_volume(float(val) / 100)
+        if background_music:
+            pygame.mixer.music.set_volume(float(val) / 100)
 
     def update_effects_volume(val):
         vol = float(val) / 100
@@ -100,9 +123,24 @@ def gui_game():
         lose_sound.set_volume(vol)
         draw_sound.set_volume(vol)
 
+    # --- 1. TASKBAR ICON FIX ---
+    try:
+        myappid = 'mycompany.rpsgame.v6' # Unique string
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+    except:
+        pass
+
     gui = tk.Tk()
     gui.title("Rock Paper Scissors")
-    gui.iconbitmap(resource_path("rps.ico"))  # sets icon for the window
+    
+    # --- 2. LOAD ICON FROM "Resource/Icon" ---
+    try:
+        # Path: Resource -> Icon -> rps.ico
+        icon_path = resource_path(os.path.join("Resource", "Icon", "rps.ico"))
+        gui.iconbitmap(icon_path) 
+    except Exception as e:
+        print(f"Icon Warning: Could not load icon from {icon_path}. Error: {e}")
+
     gui.geometry("650x800")
     gui.resizable(False, False)
 
@@ -157,18 +195,23 @@ def gui_game():
     effects_slider.set(50)
     effects_slider.pack()
 
-    # Load PNGs
-    player_images = {
-        "rock": ImageTk.PhotoImage(Image.open(resource_path("player_rock.png"))),
-        "paper": ImageTk.PhotoImage(Image.open(resource_path("player_paper.png"))),
-        "scissor": ImageTk.PhotoImage(Image.open(resource_path("player_scissor.png")))
-    }
+    # --- LOAD IMAGES (Visual Folder) ---
+    try:
+        player_images = {
+            "rock": ImageTk.PhotoImage(Image.open(resource_path(os.path.join("Resource", "Visual", "player_rock.png")))),
+            "paper": ImageTk.PhotoImage(Image.open(resource_path(os.path.join("Resource", "Visual", "player_paper.png")))),
+            "scissor": ImageTk.PhotoImage(Image.open(resource_path(os.path.join("Resource", "Visual", "player_scissor.png"))))
+        }
 
-    computer_images = {
-        "rock": ImageTk.PhotoImage(Image.open(resource_path("computer_rock.png"))),
-        "paper": ImageTk.PhotoImage(Image.open(resource_path("computer_paper.png"))),
-        "scissor": ImageTk.PhotoImage(Image.open(resource_path("computer_scissor.png")))
-    }
+        computer_images = {
+            "rock": ImageTk.PhotoImage(Image.open(resource_path(os.path.join("Resource", "Visual", "computer_rock.png")))),
+            "paper": ImageTk.PhotoImage(Image.open(resource_path(os.path.join("Resource", "Visual", "computer_paper.png")))),
+            "scissor": ImageTk.PhotoImage(Image.open(resource_path(os.path.join("Resource", "Visual", "computer_scissor.png"))))
+        }
+    except Exception as e:
+        print(f"Error loading images from Visual folder: {e}")
+        player_images = {}
+        computer_images = {}
 
     gui.mainloop()
 
