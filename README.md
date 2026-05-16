@@ -19,9 +19,12 @@ An interactive Rock Paper Scissors game built using Python and Pygame with a gra
 
 ## 📷 Preview
 
-Add screenshots or gameplay GIFs here.
+Examples:
 
-Example:
+<img width="652" height="720" alt="Screenshot 2026-05-16 234342" src="https://github.com/user-attachments/assets/53b3d9ea-8fee-42bc-8233-c84932073fdc" />
+<img width="652" height="722" alt="Screenshot 2026-05-16 234445" src="https://github.com/user-attachments/assets/a8c7d3c6-13be-468a-88a3-935314f7b9d3" />
+<img width="652" height="722" alt="Screenshot 2026-05-16 234517" src="https://github.com/user-attachments/assets/14b0909b-c878-4767-af60-3abe28ab9614" />
+
 
 ![Gameplay](assets/gameplay.gif)
 
